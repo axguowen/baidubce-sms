@@ -615,4 +615,129 @@ class SmsClient extends BceBaseClient
             '/sms/v3/quota'
         );
     }
+
+    /**
+     * 增加手机号黑名单
+     * @param String $type The value of type could be MerchantBlack or SignatureBlack.
+     * @param String $phone Support multiple mobile phone numbers, up to 200 maximum, separated by comma.
+     * @param String $smsType When the value of "type" is "SignatureBlack", this field is required.
+     * @param String $signatureId When the value of "type" is "SignatureBlack", this field is required.
+     * @param array $options
+     * @throws BceClientException
+     * @throws BceServiceException
+     */
+    public function createMobileBlack($type, $phone, $smsType = null, $signatureIdStr = null, $options = array())
+    {
+        $requestParam = array();
+
+        if (empty($type)) {
+            throw new BceClientException("type should not be null or empty");
+        }
+        $requestParam['type'] = $type;
+
+        if (empty($phone)) {
+            throw new BceClientException("phone should not be null or empty");
+        }
+        $requestParam['phone'] = $phone;
+
+        if ("SignatureBlack" == $type) {
+            if (empty($smsType)) {
+                throw new BceClientException("smsType should not be null or empty, 
+                        when 'type' is 'SignatureBlack'.");
+            }
+            if (empty($signatureIdStr)) {
+                throw new BceClientException("signatureIdStr should not be null or empty, 
+                        when 'type' is 'SignatureBlack'.");
+            }
+
+            $requestParam['signatureIdStr'] = $signatureIdStr;
+        }
+
+        if (!empty($smsType)) {
+            $requestParam['smsType'] = $smsType;
+        }
+
+        list($config) = $this->parseOptionsIgnoreExtra($options, 'config');
+        $this->sendRequest(
+            HttpMethod::POST,
+            array(
+                'config' => $config,
+                'body' => json_encode($requestParam)
+            ),
+            '/sms/v3/blacklist'
+        );
+    }
+
+    /**
+     * @param String $phone Support multiple mobile phone numbers, up to 200 maximum, separated by comma.
+     * @param String $smsType Black smsType
+     * @param String $signatureId signatureId
+     * @param String $startTime The format is 'yyyy-MM-dd'
+     * @param String $endTime The format is 'yyyy-MM-dd'
+     * @param String $pageNo The current page number
+     * @param String $pageSize The current page size, range from 1 to 99999
+     * @param array $options
+     * @throws BceClientException
+     * @throws BceServiceException
+     */
+    public function getMobileBlackList($phone = null, $smsType = null, $signatureIdStr = null, $startTime = null,
+                                    $endTime = null, $pageNo = null, $pageSize = null, $options = array())
+    {
+        $requestParam = array();
+        if (!empty($phone)) {
+            $requestParam['phone'] = $phone;
+        }
+        if (!empty($smsType)) {
+            $requestParam['smsType'] = $smsType;
+        }
+        if (!empty($signatureIdStr)) {
+            $requestParam['signatureIdStr'] = $signatureIdStr;
+        }
+        if (!empty($startTime)) {
+            $requestParam['startTime'] = $startTime;
+        }
+        if (!empty($endTime)) {
+            $requestParam['endTime'] = $endTime;
+        }
+        if (!empty($pageNo)) {
+            $requestParam['pageNo'] = $pageNo;
+        }
+        if (!empty($pageSize)) {
+            $requestParam['pageSize'] = $pageSize;
+        }
+
+        list($config) = $this->parseOptionsIgnoreExtra($options, 'config');
+        return $this->sendRequest(
+            HttpMethod::GET,
+            array(
+                'config' => $config,
+                'params' => $requestParam
+            ),
+            '/sms/v3/blacklist'
+        );
+    }
+
+    /**
+     * @param String $phones Support multiple mobile phone numbers, up to 200 maximum, separated by comma.
+     * @param array $options
+     * @throws BceClientException
+     * @throws BceServiceException
+     */
+    public function deleteMobileBlack($phones, $options = array())
+    {
+        if (empty($phones)) {
+            throw new BceClientException("phones should not be null or empty");
+        }
+        $requestParam['phones'] = $phones;
+
+        list($config) = $this->parseOptionsIgnoreExtra($options, 'config');
+        $this->sendRequest(
+            HttpMethod::DELETE,
+            array(
+                'config' => $config,
+                'params' => $requestParam
+            ),
+            '/sms/v3/blacklist/delete'
+        );
+    }
 }
