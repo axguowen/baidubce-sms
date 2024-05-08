@@ -26,6 +26,7 @@ use BaiduBce\Http\BceHttpClient;
 use BaiduBce\Http\HttpContentTypes;
 use BaiduBce\Http\HttpHeaders;
 use BaiduBce\Http\HttpMethod;
+use BaiduBce\Services\Sms\model\StatisticsResult;
 
 class SmsClient extends BceBaseClient
 {
@@ -41,7 +42,6 @@ class SmsClient extends BceBaseClient
         parent::__construct($config, 'SmsClient');
         $this->signer = new BceV1Signer();
         $this->httpClient = new BceHttpClient();
-        date_default_timezone_set("UTC");
     }
 
     /**
@@ -94,10 +94,8 @@ class SmsClient extends BceBaseClient
             $this->signer,
             $options
         );
-
         $result = $this->parseJsonResult($response['body']);
         $result->metadata = $this->convertHttpHeadersToMetadata($response['headers']);
-        //返回http状态码
 		$result->statuscode = $response['statuscode'];
         return $result;
     }
@@ -739,5 +737,60 @@ class SmsClient extends BceBaseClient
             ),
             '/sms/v3/blacklist/delete'
         );
+    }
+
+    /**
+     * @param String $startTime The start of time condition, format: yyyy-MM-dd
+     * @param String $endTime The end of time condition, format: yyyy-MM-dd
+     * @param String $smsType Queried message type, "all" as default
+     * @param String $signatureId Queried signature id
+     * @param String $templateCode Queried template code, for instance: "sms-tmpl-xxxxxxxx"
+     * @param String $countryType Queried country type, available values: "domestic", "international"
+     * @param array  $options
+     * @throws BceClientException
+     * @throws BceServiceException
+     */
+    public function listStatistics($startTime, $endTime, $smsType = "all", $countryType = "domestic",
+                                   $templateCode = null, $signatureId = null, $options = array())
+    {
+        $requestParam = array();
+
+        if (empty($startTime)) {
+            throw new BceClientException("startTime should not be null or empty!");
+        }
+
+        if (empty($endTime)) {
+            throw new BceClientException("endTime should not be null or empty!");
+        }
+
+        $requestParam['startTime'] = $startTime." 00:00:00";
+        $requestParam['endTime'] = $endTime." 23:59:59";
+        $requestParam['smsType'] = $smsType;
+        $requestParam['dimension'] = "day";
+        $requestParam['countryType'] = $countryType;
+
+        if (!empty($signatureId)) {
+            $requestParam['signatureId'] = $signatureId;
+        }
+
+        if (!empty($templateCode)) {
+            $requestParam['templateCode'] = $templateCode;
+        }
+
+        list($config) = $this->parseOptionsIgnoreExtra($options, 'config');
+        $res = $this->sendRequest(
+            HttpMethod::GET,
+            array(
+                'config' => $config,
+                'params' => $requestParam
+            ),
+            '/sms/v3/summary'
+        );
+
+        foreach ($res->statisticsResults as &$result) {
+            $result = new StatisticsResult($result);
+        }
+
+        return $res;
     }
 }
